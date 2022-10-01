@@ -1,5 +1,6 @@
 import sys
 import pandas as pd
+from sqlalchemy import create_engine
 
 def load_data(messages_filepath, categories_filepath):
     """
@@ -21,11 +22,44 @@ def load_data(messages_filepath, categories_filepath):
 
 
 def clean_data(df):
-    pass
+    """
+    a function that takes string value of "category" data and turns it into 36 columns of dummy variables. Then cleans the values to be numeric 1 or 0.
+    Finally, the dataframe is deduplicated of rows and the dummy variable features are given names according to their feature. The return
+    is a cleaned dataframe.
 
+    Args:
+        df (dataframe): merged intermediate dataframe containing messages and categories
+
+    Returns:
+        dataframe: a singular cleaned dataframe that seperates categories as dummy variables and removes all duplicate rows
+    """
+    categories = df['categories'].str.split(';',expand=True)
+    categories_colnames = categories.loc[0].str[:-2].tolist()
+    categories.columns = categories_colnames
+
+    #turn values into 0 or 1 based on end of string value, then turn numeric
+    for columns in categories:
+        categories[columns] = categories[columns].str[-1:].astype('int32')
+    df.drop(columns="categories", inplace=True)
+
+    #combine and drop duplicate rows
+    df = pd.concat([df, categories], axis=1)
+    df.drop_duplicates(keep='first', inplace=True)
+    df.reset_index()
+
+    return df
 
 def save_data(df, database_filename):
-    pass  
+    """
+    _summary_
+
+    Args:
+        df (_type_): _description_
+        database_filename (_type_): _description_
+    """
+
+    engine = create_engine('sqlite:///'+ database_filename)
+    df.to_sql("disaster_table", engine, index=False)
 
 
 def main():
