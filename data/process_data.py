@@ -51,11 +51,11 @@ def clean_data(df):
 
 def save_data(df, database_filename):
     """
-    _summary_
+    saves the dataframe into a sqllite dataframe
 
     Args:
-        df (_type_): _description_
-        database_filename (_type_): _description_
+        df (dataframe): cleaned pandas dataframe of messages and categories
+        database_filename (database): file name for the database (ex. data/distaster.db)
     """
 
     engine = create_engine('sqlite:///'+ database_filename)
