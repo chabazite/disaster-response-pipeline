@@ -3,18 +3,21 @@ import pandas as pd
 
 def load_data(messages_filepath, categories_filepath):
     """
-    _summary_
+    takes the csvs and using pandas turns reads the data in and turns them into dataframes. Then the two dataframes are merged by the common id and returned as a single dataframe.
 
     Args:
-        messages_filepath (_type_): _description_
-        categories_filepath (_type_): _description_
+        messages_filepath (csv): a csv file of twitter messages
+        categories_filepath (csv): a csv file of message categories
 
     Returns:
-        _type_: _description_
+        dataframes:the result of merging the two messages data from the input 
     """
     messages_df = pd.read_csv(messages_filepath)
     categories_df = pd.read_csv(categories_filepath)
-    return messages_df, categories_df
+
+    df = categories_df.merge(messages_df, left_on = 'id', right_on = 'id')
+
+    return df
 
 
 def clean_data(df):
