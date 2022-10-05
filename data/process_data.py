@@ -2,6 +2,7 @@ import sys
 import pandas as pd
 from sqlalchemy import create_engine
 
+
 def load_data(messages_filepath, categories_filepath):
     """
     takes the csvs and using pandas turns reads the data in and turns them into dataframes. Then the two dataframes are merged by the common id and returned as a single dataframe.
