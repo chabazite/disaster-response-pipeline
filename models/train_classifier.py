@@ -3,23 +3,24 @@ import nltk
 nltk.download('stopwords')
 nltk.download(['punkt', 'wordnet'])
 nltk.download('omw-1.4')
+nltk.download('averaged_perceptron_tagger')
 from sqlalchemy import create_engine
 import pandas as pd
 import sqlite3
 import numpy as np
+import re
 
 from nltk.tokenize import word_tokenize
 from nltk.corpus import stopwords
 from nltk.stem.wordnet import WordNetLemmatizer
-from sklearn.pipeline import Pipeline
-from sklearn.metrics import confusion_matrix
-from sklearn.model_selection import train_test_split, validation_curve
-from sklearn.ensemble import RandomForestClassifier
+from sklearn.metrics import confusion_matrix,f1_score, classification_report
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
-import re
 from sklearn.multioutput import MultiOutputClassifier
-from sklearn.metrics import classification_report, multilabel_confusion_matrix
-from sklearn.model_selection import GridSearchCV
+from sklearn.pipeline import Pipeline, FeatureUnion
+from sklearn.model_selection import  train_test_split, GridSearchCV, RandomizedSearchCV
+from sklearn.base import BaseEstimator, TransformerMixin
+
+import xgboost as xgb
 
 
 def load_data(database_filepath):
@@ -38,44 +39,49 @@ def load_data(database_filepath):
 
     df = pd.read_sql_table('disaster_table', engine)
 
+    #only zero values, so we will remove this
+    df = df.drop(['child_alone'],axis=1)
+
     X = df.iloc[:, 1].values
-    y = df.iloc[:,5:40].values
+    y = df.iloc[:,4:].values
 
     return X, y
 
 def tokenize(text):
     """
-    _summary_
+    This function will tokenize our text into words. First, it will remove all urls and insert placeholders. Then it will take the string and create individual word tokens. Finally, it will be placed through a lemmatizer, which will turn the words into their root words, lower case, and strip them of any leading or trailing spaces.
 
     Args:
-        text (_type_): _description_
+        text (string): this is the incoming social media feed that will be tokenized
 
     Returns:
-        _type_: _description_
+        list: a list of all the clean tokens for the incoming social media string
     """
-    stop_words = stopwords.words("english")
     lemmatizer = WordNetLemmatizer()
 
-    #remove punctuation
-    text = re.sub(r"[^a-zA-Z0-9]"," ", text.lower())
-
-    #tokenize text
+    url_regex = 'http[s]?://(?:[a-zA-Z]|[0-9]|[$-_@.&+]|[!*\(\),]|(?:%[0-9a-fA-F][0-9a-fA-F]))+'
+    detected_urls = re.findall(url_regex, text)
+    for url in detected_urls:
+        text = text.replace(url, "urlplaceholder")
+    
     tokens = word_tokenize(text)
+    lemmatizer = WordNetLemmatizer()
+    
+    clean_tokens = []
+    for tok in tokens:
+        clean_tok = lemmatizer.lemmatize(tok).lower().strip()
+        clean_tokens.append(clean_tok)
 
-
-    #lemmatize and remove stopwords
-    tokens = [lemmatizer.lemmatize(word) for word in tokens if word not in stop_words]
-
-    return tokens
+    return clean_tokens
 
 
 def build_model():
 
     pipeline = Pipeline([
     ('vect', CountVectorizer(tokenizer=tokenize)),
-    ('tfidf', TfidfTransformer()),
-    ('clf', MultiOutputClassifier(RandomForestClassifier()))
-])
+    ('tfidf', TfidfTransformer()), 
+    ('xg', MultiOutputClassifier(xgb.XGBClassifier(learning_rate=0.1, subsample=0.5, max_depth=4, n_estimators=100, eval_metric='mlogloss',use_label_encoder=False)))])
+
     return pipeline
 
 
