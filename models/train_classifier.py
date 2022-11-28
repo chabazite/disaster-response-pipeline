@@ -1,12 +1,72 @@
 import sys
+import nltk
+nltk.download('stopwords')
+nltk.download(['punkt', 'wordnet'])
+nltk.download('omw-1.4')
+from sqlalchemy import create_engine
+import pandas as pd
+import sqlite3
+import numpy as np
+
+from nltk.tokenize import word_tokenize
+from nltk.corpus import stopwords
+from nltk.stem.wordnet import WordNetLemmatizer
+from sklearn.pipeline import Pipeline
+from sklearn.metrics import confusion_matrix
+from sklearn.model_selection import train_test_split, validation_curve
+from sklearn.ensemble import RandomForestClassifier
+from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
+import re
+from sklearn.multioutput import MultiOutputClassifier
+from sklearn.metrics import classification_report, multilabel_confusion_matrix
+from sklearn.model_selection import GridSearchCV
 
 
 def load_data(database_filepath):
-    pass
+    """
+    function that will create the engine to read an sqlite table and convert it into a pandas dataframe. Then it will seperate the X and y values into arrays.
 
+    Args:
+        database_filepath (string): file path of sqlite database
+
+    Returns:
+        array: an independent variables array and dependent variable array
+    """
+    
+    engine = create_engine(
+    'sqlite:///'+ database_filepath)
+
+    df = pd.read_sql_table('disaster_table', engine)
+
+    X = df.iloc[:, 1].values
+    y = df.iloc[:,5:40].values
+
+    return X, y
 
 def tokenize(text):
-    pass
+    """
+    _summary_
+
+    Args:
+        text (_type_): _description_
+
+    Returns:
+        _type_: _description_
+    """
+    stop_words = stopwords.words("english")
+    lemmatizer = WordNetLemmatizer()
+
+    #remove punctuation
+    text = re.sub(r"[^a-zA-Z0-9]"," ", text.lower())
+
+    #tokenize text
+    tokens = word_tokenize(text)
+
+
+    #lemmatize and remove stopwords
+    tokens = [lemmatizer.lemmatize(word) for word in tokens if word not in stop_words]
+
+    return tokens
 
 
 def build_model():
