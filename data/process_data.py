@@ -38,14 +38,19 @@ def clean_data(df):
     categories_colnames = categories.loc[0].str[:-2].tolist()
     categories.columns = categories_colnames
 
-    #turn values into 0 or 1 based on end of string value, then turn numeric
+    # turn values into 0 or 1 based on end of string value, then turn numeric
     for columns in categories:
         categories[columns] = categories[columns].str[-1:].astype('int32')
+
     df.drop(columns="categories", inplace=True)
 
-    #combine and drop duplicate rows
+    # combine and drop duplicate rows
     df = pd.concat([df, categories], axis=1)
-    df.drop_duplicates(keep='first', inplace=True)
+   
+    # related column has values of 2, which have been checked and remapped as 1s
+    df['related'] = df['related'].map(lambda x: 1 if x == 2 else x)
+
+    df.drop_duplicates(inplace=True)
     df.reset_index()
 
     return df

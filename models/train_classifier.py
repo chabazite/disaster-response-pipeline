@@ -70,7 +70,14 @@ def tokenize(text):
 
 
 def build_model():
-    pass
+
+    pipeline = Pipeline([
+    ('vect', CountVectorizer(tokenizer=tokenize)),
+    ('tfidf', TfidfTransformer()),
+    ('clf', MultiOutputClassifier(RandomForestClassifier()))
+])
+    return pipeline
+
 
 
 def evaluate_model(model, X_test, Y_test, category_names):
