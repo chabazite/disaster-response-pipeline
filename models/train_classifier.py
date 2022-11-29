@@ -14,6 +14,7 @@ from sklearn.metrics import classification_report
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.multioutput import MultiOutputClassifier
 from sklearn.pipeline import Pipeline, FeatureUnion
+from sklearn.model_selection import  train_test_split
 
 from sklearn.base import BaseEstimator, TransformerMixin
 import pickle
