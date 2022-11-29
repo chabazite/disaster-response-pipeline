@@ -31,7 +31,7 @@ def load_data(database_filepath):
         database_filepath (string): file path of sqlite database
 
     Returns:
-        array: an independent variables array and dependent variable array
+        array: an independent variables array and dependent variable array. Also returns the training and testing split of these variables
     """
     
     engine = create_engine(
@@ -45,7 +45,9 @@ def load_data(database_filepath):
     X = df.iloc[:, 1].values
     y = df.iloc[:,4:].values
 
-    return X, y
+    X_train, X_test, y_train, y_test = train_test_split(X, y)
+
+    return X, y , X_train, X_test, y_train, y_test
 
 def tokenize(text):
     """
@@ -82,12 +84,24 @@ def build_model():
     ('tfidf', TfidfTransformer()), 
     ('xg', MultiOutputClassifier(xgb.XGBClassifier(learning_rate=0.1, subsample=0.5, max_depth=4, n_estimators=100, eval_metric='mlogloss',use_label_encoder=False)))])
 
-    return pipeline
+    pipeline.fit(X_train, y_train)
+    
+
+    return pipeline, y_pred
 
 
 
-def evaluate_model(model, X_test, Y_test, category_names):
-    pass
+def evaluate_model(pipeline, X_test, Y_test, category_names):
+
+    y_pred = pipeline.predict(X_test)
+
+    for index, label in enumerate(category_names):
+        classification = classification_report(Y_test[:,index-1], y_pred[:,index-1]);
+        print('----------------------------\n')
+        print(label,"\n",classification)
+    return
+   
+
 
 
 def save_model(model, model_filepath):
