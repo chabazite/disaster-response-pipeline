@@ -158,7 +158,7 @@ def save_model(model, model_filepath):
         model_filepath (_type_): _description_
     """
 
-    pickle.dump(model, open(model_filepath + 'disaster_model.sav', 'wb'))
+    pickle.dump(model, open(model_filepath, 'wb'))
 
     return
 
