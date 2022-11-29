@@ -6,22 +6,44 @@ nltk.download('omw-1.4')
 nltk.download('averaged_perceptron_tagger')
 from sqlalchemy import create_engine
 import pandas as pd
-import sqlite3
-import numpy as np
 import re
 
 from nltk.tokenize import word_tokenize
-from nltk.corpus import stopwords
 from nltk.stem.wordnet import WordNetLemmatizer
-from sklearn.metrics import confusion_matrix,f1_score, classification_report
+from sklearn.metrics import classification_report
 from sklearn.feature_extraction.text import CountVectorizer, TfidfTransformer
 from sklearn.multioutput import MultiOutputClassifier
 from sklearn.pipeline import Pipeline, FeatureUnion
-from sklearn.model_selection import  train_test_split, GridSearchCV, RandomizedSearchCV
+
 from sklearn.base import BaseEstimator, TransformerMixin
+import pickle
 
 import xgboost as xgb
 
+class StartingPronounExtractor(BaseEstimator, TransformerMixin):
+    """
+    _summary_
+
+    Args:
+        BaseEstimator (_type_): _description_
+        TransformerMixin (_type_): _description_
+    """
+    def starting_pronoun(self, text):
+        sentence_list = nltk.sent_tokenize(text)
+        for sentence in sentence_list:
+            pos_tags = nltk.pos_tag(tokenize(sentence))
+            first_word, first_tag = pos_tags[0]
+            # return true if the first word is an appropriate verb or RT for retweet
+            if first_tag in ['PRP', 'PRP$']:
+                return True
+        return False
+
+    def fit(self, X, y=None):
+        return self
+
+    def transform(self, X):
+        X_tagged = pd.Series(X).apply(self.starting_pronoun)
+        return pd.DataFrame(X_tagged)
 
 def load_data(database_filepath):
     """
@@ -45,9 +67,9 @@ def load_data(database_filepath):
     X = df.iloc[:, 1].values
     y = df.iloc[:,4:].values
 
-    X_train, X_test, y_train, y_test = train_test_split(X, y)
+    category_names = list(df.iloc[:,4:].columns)
 
-    return X, y , X_train, X_test, y_train, y_test
+    return X, y , category_names
 
 def tokenize(text):
     """
@@ -78,20 +100,40 @@ def tokenize(text):
 
 
 def build_model():
+    """
+    _summary_
 
+    Returns:
+        _type_: _description_
+    """
+    
     pipeline = Pipeline([
-    ('vect', CountVectorizer(tokenizer=tokenize)),
-    ('tfidf', TfidfTransformer()), 
+    ('features', FeatureUnion([
+
+        ('nlp_pipeline', Pipeline([
+            ('vect', CountVectorizer(tokenizer=tokenize)),
+            ('tfidf', TfidfTransformer())
+        ])),
+
+        ('prnoun', StartingPronounExtractor())
+    ])),
+
     ('xg', MultiOutputClassifier(xgb.XGBClassifier(learning_rate=0.1, subsample=0.5, max_depth=4, n_estimators=100, eval_metric='mlogloss',use_label_encoder=False)))])
 
-    pipeline.fit(X_train, y_train)
-    
-
-    return pipeline, y_pred
+    return pipeline
 
 
 
 def evaluate_model(pipeline, X_test, Y_test, category_names):
+    """
+    _summary_
+
+    Args:
+        pipeline (_type_): _description_
+        X_test (_type_): _description_
+        Y_test (_type_): _description_
+        category_names (_type_): _description_
+    """
 
     y_pred = pipeline.predict(X_test)
 
@@ -99,13 +141,26 @@ def evaluate_model(pipeline, X_test, Y_test, category_names):
         classification = classification_report(Y_test[:,index-1], y_pred[:,index-1]);
         print('----------------------------\n')
         print(label,"\n",classification)
+    
+    print( classification_report(Y_test,y_pred, target_names = category_names))
+
     return
    
 
 
 
 def save_model(model, model_filepath):
-    pass
+    """
+    _summary_
+
+    Args:
+        model (_type_): _description_
+        model_filepath (_type_): _description_
+    """
+
+    pickle.dump(model, open(model_filepath + 'disaster_model.sav', 'wb'))
+
+    return
 
 
 def main():
